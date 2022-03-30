@@ -448,5 +448,32 @@ knn.pred <- function(x, y, n=5){
   cMat
 }
 
+ssRSEA <- function(x, labels){
+  ## single sample RFU-set-enrichment analysis
+  ## x: input RFU vector for a given sample
+  ## label: binary vector with 1 being in the RFU set of interest
+  vv=order(x,decreasing=T)
+  xs=x[vv]
+  labels=labels[vv]
+  yy=c()
+  y.cur=0
+  n0=length(which(labels==0))
+  S0=sum(xs[which(labels==1)])
+  # for(ii in 1:length(xs)){
+  #   if(labels[ii]==0){
+  #     y.cur=y.cur-1/n0
+  #   }else{
+  #     y.cur=y.cur+xs[ii]/S0
+  #   }
+  #   yy=c(yy,y.cur)
+  # }
+  yList=rep(-1/n0, length(xs))
+  yList[which(labels==1)]=xs[which(labels==1)]/S0
+  yy=cumsum(yList)
+  ddy=cbind(curve=yy,scores=xs,labels)
+  rownames(ddy)=names(labels)
+  return(ddy)   ## mean(ddy[,1]) is a predictor
+}
+
 
 
