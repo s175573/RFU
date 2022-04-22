@@ -174,7 +174,16 @@ getTrimerEncoding <- function(x, DIM=100){
   fit
 }
 
-#EncodeRepertoire <- function(ff, Vgene=TRUE, w=1){
+getTrimerPos <- function(cdr3, st=5, ed=4, MAX=6){
+  nL=nchar(cdr3)
+  posL=c(st:min(nL-ed, st+MAX-1))
+  ss=sapply(posL, function(x)substr(cdr3, x, x+2))
+  ss=unlist(ss)
+  ns=length(ss)+st-1
+  return(paste(st:ns, ss, sep='_'))
+}
+
+EncodeRepertoire.pos <- function(ff, Vgene=TRUE, w=1){
   dd1=read.table(ff, header=F,sep='\t',stringsAsFactors = F)
   vv=grep('^C',dd1[,1])
   dd1=dd1[vv,]
@@ -256,8 +265,9 @@ AssignRFUs <- function(ff, CL=km5000, THR=0.6){
   list(RFU= RFU, N=Nmiss, COR=tmp, TCR=tmpv)
 }
 
-#AssignRFUs.d <- function(ff, CL=km5000, THR=0.25, BIG=FALSE){
+AssignRFUs.d <- function(ff, CL=km5000, THR=0.25, BIG=FALSE){
   ## Assign repertoire functional units defined by k-means cluster centroids from pooled control samples
+  ## distance-based RFU assignment. It is much slower than correlation-based assignment and produced similar results.
   require(Rfast)
   require(parallel)
   dd=EncodeRepertoire(ff)
