@@ -104,7 +104,7 @@ PrepareAdaptiveFile <- function(indir,outdir,AlternativeFormat=FALSE,thr=10000, 
   }
 }
 
-PrepareAdaptiveFile1 <- function(indir,outdir,AlternativeFormat=FALSE,thr=10000, naive=FALSE, pattern='.tsv', randomize=TRUE, clip=FALSE){
+PrepareAdaptiveFile1 <- function(indir,outdir,AlternativeFormat=FALSE,thr=15000, naive=FALSE, pattern='.tsv', randomize=TRUE, clip=FALSE){
   ffs=dir(indir,full.names=T)
   ffs=ffs[grep(pattern, ffs)]
   for(ff in ffs){
