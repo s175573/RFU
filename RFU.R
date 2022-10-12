@@ -1,14 +1,14 @@
 ## Repertoire Functional Units
-load('RFU_housekeepking.Rdata')  ## housekeeping RFUs for batch detection
-load('RFUcancer_list0901.Rdata') ## cancer related RFUs selected by TCGA data
-f='CDRtable.txt'
-x=read.table(f, header=F, sep='\t', stringsAsFactors = F)
-vv.rm=c(grep('[*.]',x[,2]), grep('[*.]',x[,3]))
-x=x[-vv.rm,]
-CDR1=x[,2]
-names(CDR1)=x[,1]
-CDR2=x[,3]
-names(CDR2)=x[,1]
+#load('RFU_housekeepking.Rdata')  ## housekeeping RFUs for batch detection
+#load('RFUcancer_list0901.Rdata') ## cancer related RFUs selected by TCGA data
+#f='CDRtable.txt'
+#x=read.table(f, header=F, sep='\t', stringsAsFactors = F)
+#vv.rm=c(grep('[*.]',x[,2]), grep('[*.]',x[,3]))
+#x=x[-vv.rm,]
+#CDR1=x[,2]
+#names(CDR1)=x[,1]
+#CDR2=x[,3]
+#names(CDR2)=x[,1]
 
 ProcessAdaptiveVgenes <- function(dd){
   Vgene_o=c(1,2,9,13:19,26:28,30)
@@ -174,7 +174,39 @@ getTrimerEncoding <- function(x, DIM=100){
   fit
 }
 
-getTrimerPos <- function(cdr3, st=5, ed=4, MAX=6){
+# #EncodeRepertoire <- function(ff, Vgene=TRUE, w=1){
+#   dd1=read.table(ff, header=F,sep='\t',stringsAsFactors = F)
+#   vv=grep('^C',dd1[,1])
+#   dd1=dd1[vv,]
+#   if(Vgene){
+#     Vs=which(dd1[,2] %in% names(CDR1))
+#     dd1=dd1[Vs,]
+#   }
+#   if(is.null(ncol(dd1)))ssL=sapply(dd1, getTrimers) else ssL=sapply(dd1[,1], getTrimers)
+#   foo <- function(ss){
+#     ss=gsub('.+_','',ss)
+#     ss=intersect(ss, rownames(fit))
+#     if(length(ss)==1)return(fit[ss,])
+#     xs=t(fit[ss,])
+#     xx = rowMeans(xs)    
+#   }
+#   x.mat=sapply(ssL, foo)
+#   if(Vgene){
+#     Vss=dd1[,2]
+#     cdr1=CDR1[Vss]
+#     cdr2=CDR2[Vss]
+#     ssV1=lapply(cdr1, getTrimers, st=1, ed=0)
+#     ssV2=lapply(cdr2, getTrimers, st=1, ed=0)
+#     x.mat1=sapply(ssV1, foo)
+#     x.mat2=sapply(ssV2, foo)
+#     x.matV=rbind(x.mat1, x.mat2)
+#     colnames(x.matV)=colnames(x.mat)
+#     x.mat0= rbind(x.mat, w*x.matV)
+#   }else x.mat0=x.mat
+#   return(t(x.mat0))
+# }
+
+getTrimerPos <- function(cdr3, st=3, ed=4, MAX=99){  ## was st=5, ed=4, MAX=6
   nL=nchar(cdr3)
   posL=c(st:min(nL-ed, st+MAX-1))
   ss=sapply(posL, function(x)substr(cdr3, x, x+2))
@@ -183,43 +215,11 @@ getTrimerPos <- function(cdr3, st=5, ed=4, MAX=6){
   return(paste(st:ns, ss, sep='_'))
 }
 
-EncodeRepertoire.pos <- function(ff, Vgene=TRUE, w=1){
-  dd1=read.table(ff, header=F,sep='\t',stringsAsFactors = F)
-  vv=grep('^C',dd1[,1])
-  dd1=dd1[vv,]
-  if(Vgene){
-    Vs=which(dd1[,2] %in% names(CDR1))
-    dd1=dd1[Vs,]
-  }
-  if(is.null(ncol(dd1)))ssL=sapply(dd1, getTrimers) else ssL=sapply(dd1[,1], getTrimers)
-  foo <- function(ss){
-    ss=gsub('.+_','',ss)
-    ss=intersect(ss, rownames(fit))
-    if(length(ss)==1)return(fit[ss,])
-    xs=t(fit[ss,])
-    xx = rowMeans(xs)    
-  }
-  x.mat=sapply(ssL, foo)
-  if(Vgene){
-    Vss=dd1[,2]
-    cdr1=CDR1[Vss]
-    cdr2=CDR2[Vss]
-    ssV1=lapply(cdr1, getTrimers, st=1, ed=0)
-    ssV2=lapply(cdr2, getTrimers, st=1, ed=0)
-    x.mat1=sapply(ssV1, foo)
-    x.mat2=sapply(ssV2, foo)
-    x.matV=rbind(x.mat1, x.mat2)
-    colnames(x.matV)=colnames(x.mat)
-    x.mat0= rbind(x.mat, w*x.matV)
-  }else x.mat0=x.mat
-  return(t(x.mat0))
-}
-
 EncodeRepertoire<-function(ff){
   dd1=read.table(ff, header=F,sep='\t',quote='',stringsAsFactors = F)
   vv=grep('^C',dd1[,1])
   dd1=dd1[vv,]
-  ssL=sapply(dd1[,1], getTrimerPos, st=5,ed=4)
+  ssL=sapply(dd1[,1], getTrimerPos, st=2,ed=4)
   #sapply(sapply(dd1[,1], getTrimerPos, st=5,ed=4), function(x)tt0[intersect(x, names(tt0))]) -> tmp
   #sapply(tmp, function(x)x^0/sum(x^0)) ->tmp1
   # for(x in tmp1){
@@ -246,8 +246,9 @@ EncodeRepertoire<-function(ff){
   return(t(x.mat))
 }
 
-AssignRFUs <- function(ff, CL=km5000, THR=0.6){
+AssignRFUs <- function(ff, CL=km5000noMax, THR=0.6, normalize=FALSE){
   ## Assign repertoire functional units defined by k-means cluster centroids from pooled control samples
+  ## if normalize=TRUE, each RFU will be normalized by the abundance of the cluster in the reference data (CL$cluster)
   dd=EncodeRepertoire(ff)
   ddc=CL$centers
   dd.cor = cor(t(dd), t(ddc), method='s')
@@ -259,57 +260,86 @@ AssignRFUs <- function(ff, CL=km5000, THR=0.6){
   RFU = rep(0, length(tt0))
   names(RFU)=1:length(RFU)
   RFU[names(tt)] = tt
-  #RFU = RFU / as.numeric(tt0)  ## normalize by original cluster sizes
   RFU = RFU / nrow(dd) * 10000 ## normalize by total TCR in the data
+  if(normalize)RFU = RFU / as.numeric(tt0)  ## normalize by original cluster sizes
   Nmiss= nrow(dd) - length(vv)
   list(RFU= RFU, N=Nmiss, COR=tmp, TCR=tmpv)
 }
 
-AssignRFUs.d <- function(ff, CL=km5000, THR=0.25, BIG=FALSE){
+AssignRFUs.r <- function(ff, CL=km5000, THR=0.6, RANK=FALSE){
   ## Assign repertoire functional units defined by k-means cluster centroids from pooled control samples
-  ## distance-based RFU assignment. It is much slower than correlation-based assignment and produced similar results.
-  require(Rfast)
-  require(parallel)
+  ## if normalize=TRUE, each RFU will be normalized by the abundance of the cluster in the reference data (CL$cluster)
+  ## return sum of ranks of TCRs for each RFU
+  dd0=read.table(ff, header=T,sep='\t')
+  dd0=dd0[grep('^C',dd0[,1]),]
+  if(!RANK)TCRfreq = dd0[,3] else TCRfreq = rank(dd0[,3])/nrow(dd0)  ## normalized rank
   dd=EncodeRepertoire(ff)
   ddc=CL$centers
-  Nd=nrow(dd)
-  Nc=nrow(ddc)
-  
-  if(BIG){
-    cat(" Switching to big data mode: slow but memory friendly")
-    foo <- function(x){
-      DIFF=apply(ddc, 1, function(y)y-x)
-      apply(DIFF, 2, function(x)sum(x^2)) -> tmp.dist
-      vvx=which.min(tmp.dist)
-      minx=min(tmp.dist)
-      return(c(minx, vvx))
-    }
-    TMP = mclapply(1:Nd, function(x)foo(dd[x,]))
-    TMPm=do.call(cbind, TMP)
-    tmp= TMPm[1,]
-    tmpv = as.integer(TMPm[2,])
-  }else{ 
-    tmp.dist = Dist(rbind(dd,ddc))
-    tmp.dist=as.matrix(tmp.dist)
-    tmp.mat=tmp.dist[1:Nd, (Nd+1):(Nd+Nc)]
-    tmp=apply(tmp.mat, 1, min)
-    tmpv=apply(tmp.mat, 1, function(x)which.min(x)[1])
-  }
-  vv=which(tmp>THR)
-  tmpv[vv]=NA
-  
+  dd.cor = cor(t(dd), t(ddc), method='s')
+  tmp=apply(dd.cor, 1, max)
+  vv=which(tmp>=THR)
+  tmpv=apply(dd.cor, 1, function(x)which.max(x)[1])
+  tmpdd=data.frame(cbind(center=tmpv, Freq=TCRfreq))
+  TMP = tmpdd %>% group_by(center) %>% summarise(sum(Freq))
+  vv.na = which(is.na(TMP[,1]))
+  if(length(vv.na)>0)TMP=TMP[-vv.na,]
+  rfu=as.numeric(unlist(TMP[,2]))
   tt=table(tmpv)
   tt0=table(CL$cl)
   RFU = rep(0, length(tt0))
   names(RFU)=1:length(RFU)
-  RFU[names(tt)] = tt
-  #RFU = RFU / as.numeric(tt0)  ## normalize by original cluster sizes
-  RFU = RFU / nrow(dd) * 10000 ## normalize by total TCR in the data
-  Pmiss= length(vv)/nrow(dd)
-  list(RFU= RFU, N=nrow(dd),P=Pmiss, COR=tmp, TCR=tmpv)
+  RFU[unlist(TMP[,1])]=rfu
+  #RFU[names(tt)] = tt
+  #RFU = RFU / nrow(dd) * 10000 ## normalize by total TCR in the data
+  #Nmiss= nrow(dd) - length(vv)
+  RFU
 }
 
-RFUbatch <- function(DIR){
+# #AssignRFUs.d <- function(ff, CL=km5000, THR=0.25, BIG=FALSE){
+#   ## Assign repertoire functional units defined by k-means cluster centroids from pooled control samples
+#   require(Rfast)
+#   require(parallel)
+#   dd=EncodeRepertoire(ff)
+#   ddc=CL$centers
+#   Nd=nrow(dd)
+#   Nc=nrow(ddc)
+#   
+#   if(BIG){
+#     cat(" Switching to big data mode: slow but memory friendly")
+#     foo <- function(x){
+#       DIFF=apply(ddc, 1, function(y)y-x)
+#       apply(DIFF, 2, function(x)sum(x^2)) -> tmp.dist
+#       vvx=which.min(tmp.dist)
+#       minx=min(tmp.dist)
+#       return(c(minx, vvx))
+#     }
+#     TMP = mclapply(1:Nd, function(x)foo(dd[x,]))
+#     TMPm=do.call(cbind, TMP)
+#     tmp= TMPm[1,]
+#     tmpv = as.integer(TMPm[2,])
+#   }else{ 
+#     tmp.dist = Dist(rbind(dd,ddc))
+#     tmp.dist=as.matrix(tmp.dist)
+#     tmp.mat=tmp.dist[1:Nd, (Nd+1):(Nd+Nc)]
+#     tmp=apply(tmp.mat, 1, min)
+#     tmpv=apply(tmp.mat, 1, function(x)which.min(x)[1])
+#   }
+#   vv=which(tmp>THR)
+#   tmpv[vv]=NA
+#   
+#   tt=table(tmpv)
+#   tt0=table(CL$cl)
+#   RFU = rep(0, length(tt0))
+#   names(RFU)=1:length(RFU)
+#   RFU[names(tt)] = tt
+#   #RFU = RFU / as.numeric(tt0)  ## normalize by original cluster sizes
+#   RFU = RFU / nrow(dd) * 10000 ## normalize by total TCR in the data
+#   Pmiss= length(vv)/nrow(dd)
+#   list(RFU= RFU, N=nrow(dd),P=Pmiss, COR=tmp, TCR=tmpv)
+# }
+
+RFUbatch <- function(DIR, TYPE=1){
+  ## TYPE: 1, unranked RFU counts using AssignRFUs; 2, ranked RFU counts using AssignRFUs.r
   dd.RFU =c()
   tmp.N=c()
   ffs=dir(DIR, full.names=T)
@@ -317,9 +347,14 @@ RFUbatch <- function(DIR){
   for(ff in ffs[1:length(ffs)]){
     print(ff)
     if(length(grep('[tc]sv|txt',ff))==0)next
-    RFU = AssignRFUs(ff)
-    dd.RFU=cbind(dd.RFU, RFU$RFU)
-    tmp.N=c(tmp.N, RFU$N)
+    if(TYPE==1){
+      RFU = AssignRFUs(ff)
+      dd.RFU=cbind(dd.RFU, RFU$RFU)
+      tmp.N=c(tmp.N, RFU$N)
+    }else{
+      RFU = AssignRFUs.r(ff, RANK=TRUE)
+      dd.RFU=cbind(dd.RFU, RFU)
+    }
   }
   
   ffs=gsub('.+/','',ffs)
@@ -327,8 +362,7 @@ RFUbatch <- function(DIR){
   colnames(dd.RFU)=gsub('.+TestReal-','',ffs)
   colnames(dd.RFU)=gsub('.[tc]sv|txt','',colnames(dd.RFU))
   
-  TMP=c(RFU=list(dd.RFU), Nmiss=list(tmp.N))
-  return(TMP)
+  dd.RFU
 }
 
 batch.check <- function(d1, d2, mode=1, TYPE='median'){
@@ -381,7 +415,6 @@ batch.check2 <- function(d1, d2){
   tmp=wilcox.test(pca[,4] ~ labels)
   boxplot(pca[,4] ~ labels, main=paste('PC4: P=', round(tmp$p.value,3),sep=''), cex.axis=1.3, cex.lab=1.3, ylab='PC4', xlab='')
 }
-
 
 DiffDensityPlot <- function(f1, f2, TMP=NULL, n1=-1, ZLIM=0.0002){
   require(MASS)
@@ -458,7 +491,7 @@ knn.pred <- function(x, y, n=5){
   cMat
 }
 
-ssRSEA <- function(x, labels){
+ssRSEA <- function(x, labels,thr=0.01){
   ## single sample RFU-set-enrichment analysis
   ## x: input RFU vector for a given sample
   ## label: binary vector with 1 being in the RFU set of interest
@@ -482,8 +515,166 @@ ssRSEA <- function(x, labels){
   yy=cumsum(yList)
   ddy=cbind(curve=yy,scores=xs,labels)
   rownames(ddy)=names(labels)
-  return(ddy)   ## mean(ddy[,1]) is a predictor
+  return(ddy)
 }
 
+AssignRFUs.spectrum <- function(ff, CL=km5000, THR=0.6, normalize=FALSE){
+  ## Assign repertoire functional units defined by k-means cluster centroids from pooled control samples
+  ## if normalize=TRUE, each RFU will be normalized by the abundance of the cluster in the reference data (CL$cluster)
+  dd=EncodeRepertoire(ff)
+  ddc=CL$centers
+  dd.cor = cor(t(dd), t(ddc), method='s')
+  tmp=apply(dd.cor, 1, max)
+  vv=which(tmp>=THR)
+  tmpv=apply(dd.cor, 1, function(x)which.max(x)[1])
+  NL = length(tmpv)
+  RFUmat=c()
+  st=1
+  Step= floor(NL/64)
+  Width = floor(NL/8)
+  while(1){
+    ed=st+Width-1
+    if(ed>NL)break
+    tt=table(tmpv[st:ed])
+    tt0=table(CL$cl)
+    RFU = rep(0, length(tt0))
+    names(RFU)=1:length(RFU)
+    RFU[names(tt)] = tt
+    RFU = RFU/Width*10000
+    RFUmat=cbind(RFUmat, RFU)
+    st=st+Step
+  }
+  RFUmat
+}
+
+RFUbatchR <- function(DIR){
+  ## TYPE: 1, unranked RFU counts using AssignRFUs; 2, ranked RFU counts using AssignRFUs.r
+  dd.RFU =c()
+  tmp.N=c()
+  ffs=dir(DIR, full.names=T)
+  ffs=ffs[grep('[tc]sv|txt',ffs)]
+  for(ff in ffs[1:length(ffs)]){
+    print(ff)
+    if(length(grep('[tc]sv|txt',ff))==0)next
+    RFU = AssignRFUs.spectrum(ff)
+    dd.RFU=c(dd.RFU, list(RFU))
+  }
+  
+  ffs=gsub('.+/','',ffs)
+  
+  names(dd.RFU)=gsub('.+TestReal-','',ffs)
+  names(dd.RFU)=gsub('.[tc]sv|txt','',colnames(dd.RFU))
+  
+  dd.RFU
+}
+
+
+AssignRFUs.rsea <- function(ff, CL=km5000, normalize=FALSE){
+  ## Assign repertoire functional units defined by k-means cluster centroids from pooled control samples
+  ## if normalize=TRUE, each RFU will be normalized by the abundance of the cluster in the reference data (CL$cluster)
+  dd=EncodeRepertoire(ff)
+  ddc=CL$centers
+  dd.cor = cor(t(dd), t(ddc), method='s')
+  tmp=apply(dd.cor, 1, max)
+  tmpv=apply(dd.cor, 1, function(x)which.max(x)[1])
+  NL = length(tmpv)
+  RANKv = NL:1
+  RANKv = RANKv/NL
+  foo.rsea <- function(ii){
+    vv = which(tmpv==ii)
+    S0=sum(RANKv[vv])
+    N0 = NL-S0
+    yList = rep(-1/N0, NL)
+    yList[vv]=RANKv[vv]/S0
+    yy=cumsum(yList)
+    mean(yy)
+  }
+  RFU=sapply(1:max(CL$cluster), foo.rsea)
+  RFU
+}
+
+RFUbatchRsea <- function(DIR){
+  ## TYPE: 1, unranked RFU counts using AssignRFUs; 2, ranked RFU counts using AssignRFUs.r
+  dd.RFU =c()
+  tmp.N=c()
+  ffs=dir(DIR, full.names=T)
+  ffs=ffs[grep('[tc]sv|txt',ffs)]
+  for(ff in ffs[1:length(ffs)]){
+    print(ff)
+    if(length(grep('[tc]sv|txt',ff))==0)next
+    RFU = AssignRFUs.rsea(ff)
+    dd.RFU=cbind(dd.RFU, RFU)
+  }
+  
+  ffs=gsub('.+/','',ffs)
+  
+  names(dd.RFU)=gsub('.+TestReal-','',ffs)
+  names(dd.RFU)=gsub('.[tc]sv|txt','',colnames(dd.RFU))
+  
+  dd.RFU
+}
+
+
+AssignRFUs.rank <- function(ff, CL=km5000, THR=0.6, normalize=FALSE){
+  ## Assign repertoire functional units defined by k-means cluster centroids from pooled control samples
+  ## if normalize=TRUE, each RFU will be normalized by the abundance of the cluster in the reference data (CL$cluster)
+  dd=EncodeRepertoire(ff)
+  ddc=CL$centers
+  dd.cor = cor(t(dd), t(ddc), method='s')
+  tmp=apply(dd.cor, 1, max)
+  vv=which(tmp>=THR)
+  RFU=apply(dd.cor, 1, function(x)which.max(x)[1])
+  RFU
+}
+
+RFUrank.odds <- function(dd.RFU.rank, TYPE=c('odds','rank')){
+  xxMat=c()
+  Nsize = c()
+  for(jj in 1:length(dd.RFU.rank)){
+    print(jj)
+    xx=dd.RFU.rank[[jj]]
+    tmp.xx=c()
+    Nx=length(xx)
+    THR=floor(Nx*0.1)
+    xxs=xx[1:THR]
+    tts=table(xxs)
+    tts0=rep(0, 5000)
+    names(tts0)=1:5000
+    tt0=tts0
+    tts0[names(tts)]=tts
+    tt=table(xx)
+    tt0[names(tt)]=tt
+    vv=which(tt0==0)
+    yy = tts0/tt0*10
+    yy[vv]=0
+    if(TYPE=='odds'){
+      xxMat=cbind(xxMat, yy)
+    }else xxMat = cbind(xxMat, tts0/Nx*10)
+  }
+  rownames(xxMat)=1:5000
+  colnames(xxMat)=names(dd.RFU.rank)
+  xxMat
+}
+
+RFUbatchRank <- function(DIR){
+  ## TYPE: 1, unranked RFU counts using AssignRFUs; 2, ranked RFU counts using AssignRFUs.r
+  dd.RFU =c()
+  tmp.N=c()
+  ffs=dir(DIR, full.names=T)
+  ffs=ffs[grep('[tc]sv|txt',ffs)]
+  for(ff in ffs[1:length(ffs)]){
+    print(ff)
+    if(length(grep('[tc]sv|txt',ff))==0)next
+    RFU = AssignRFUs.rank(ff)
+    dd.RFU=c(dd.RFU, list(RFU))
+  }
+  
+  ffs=gsub('.+/','',ffs)
+  
+  names(dd.RFU)=gsub(DIR,'',ffs)
+  names(dd.RFU)=gsub('.[tc]sv|txt','',names(dd.RFU))
+  
+  dd.RFU
+}
 
 
