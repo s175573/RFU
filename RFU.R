@@ -219,7 +219,7 @@ EncodeRepertoire<-function(ff){
   dd1=read.table(ff, header=F,sep='\t',quote='',stringsAsFactors = F)
   vv=grep('^C',dd1[,1])
   dd1=dd1[vv,]
-  ssL=sapply(dd1[,1], getTrimerPos, st=2,ed=4)
+  ssL=sapply(dd1[,1], getTrimerPos, st=2,ed=4, simplify=FALSE)
   #sapply(sapply(dd1[,1], getTrimerPos, st=5,ed=4), function(x)tt0[intersect(x, names(tt0))]) -> tmp
   #sapply(tmp, function(x)x^0/sum(x^0)) ->tmp1
   # for(x in tmp1){
