@@ -16,3 +16,17 @@ This command creates a variable named `fit` in the environment.
 
 This command creates a variable named  `km5000noMax`.
 
+The `EncodeRepertoire` function calculates the trimer-embedding matrix for a preprocessed input file:
+
+`Embed.mat <- EncodeRepertoire('example.tsv')`
+
+To date, this function is internally called in the wrapper function `AssignRFUs`. Usually there is no need to directly use it.  
+
+The `AssignRFUs` function will convert the preprocessed TCR-seq file into an RFU vector:
+
+`rfu <- AssignRFUs('example.tsv', CL=km5000noMax)`
+
+The `RFUbatch` function iteratively implements `AssignRFUs` to all the TCR-seq files in a folder:
+
+`RFU.matrix <- RFUbatch('Input_DIR/')`
+
