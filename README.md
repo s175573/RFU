@@ -16,6 +16,10 @@ This command creates a variable named `fit` in the environment.
 
 This command creates a variable named  `km5000noMax`.
 
+Then, load the R codes into memory:
+
+`source('RFU.R')`
+
 The `EncodeRepertoire` function calculates the trimer-embedding matrix for a preprocessed input file:
 
 `Embed.mat <- EncodeRepertoire('example.tsv')`
